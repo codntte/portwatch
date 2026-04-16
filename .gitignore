@@ -1,0 +1,13 @@
+# Go
+
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor/
+*.out
+*.prof
+coverage.txt
+.env
+*.test

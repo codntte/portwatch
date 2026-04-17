@@ -71,6 +71,31 @@ func TestCompare_NoDiff(t *testing.T) {
 	}
 }
 
+func TestCompare_EmptySnapshots(t *testing.T) {
+	prev := New("localhost", []int{})
+	curr := New("localhost", []int{})
+
+	diff := Compare(prev, curr)
+	if len(diff.Opened) != 0 || len(diff.Closed) != 0 {
+		t.Errorf("expected no diff for empty snapshots, got opened=%v closed=%v", diff.Opened, diff.Closed)
+	}
+}
+
+func TestCompare_AllClosed(t *testing.T) {
+	prev := New("localhost", []int{22, 80, 443})
+	curr := New("localhost", []int{})
+
+	diff := Compare(prev, curr)
+	sort.Ints(diff.Closed)
+
+	if len(diff.Opened) != 0 {
+		t.Errorf("expected no opened ports, got %v", diff.Opened)
+	}
+	if len(diff.Closed) != 3 {
+		t.Errorf("Closed: got %v, want [22 80 443]", diff.Closed)
+	}
+}
+
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }

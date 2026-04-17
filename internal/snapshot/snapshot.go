@@ -21,6 +21,11 @@ type Diff struct {
 	Closed []int
 }
 
+// HasChanges reports whether any ports were opened or closed.
+func (d Diff) HasChanges() bool {
+	return len(d.Opened) > 0 || len(d.Closed) > 0
+}
+
 // New creates a Snapshot for the given host and port list.
 func New(host string, ports []int) Snapshot {
 	sorted := make([]int, len(ports))
@@ -42,6 +47,7 @@ func Save(path string, s Snapshot) error {
 }
 
 // Load reads a snapshot from a JSON file at path.
+// If the file does not exist, an empty Snapshot is returned with no error.
 func Load(path string) (Snapshot, error) {
 	f, err := os.Open(path)
 	if err != nil {

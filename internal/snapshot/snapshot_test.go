@@ -36,6 +36,14 @@ func TestLoad_MissingFile(t *testing.T) {
 	}
 }
 
+func TestSave_InvalidPath(t *testing.T) {
+	snap := New("localhost", []int{22})
+	err := Save("/nonexistent/dir/snap.json", snap)
+	if err == nil {
+		t.Error("expected error for invalid save path, got nil")
+	}
+}
+
 func TestCompare(t *testing.T) {
 	prev := New("localhost", []int{22, 80, 443})
 	curr := New("localhost", []int{22, 443, 8080})

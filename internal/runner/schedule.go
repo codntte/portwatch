@@ -22,8 +22,13 @@ func NewScheduler(r *Runner, interval time.Duration) *Scheduler {
 }
 
 // Start begins the scheduling loop (blocking). Call Stop to exit.
+// The runner is also invoked immediately on start before waiting for the
+// first tick, so there is no delay on initial execution.
 func (s *Scheduler) Start() {
 	log.Printf("[portwatch] scheduler started, interval=%s", s.interval)
+	if err := s.runner.Run(); err != nil {
+		log.Printf("[portwatch] run error: %v", err)
+	}
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 	for {

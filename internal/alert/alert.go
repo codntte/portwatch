@@ -4,63 +4,66 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
+	"sort"
 
 	"github.com/user/portwatch/internal/snapshot"
 )
 
-// Level represents the severity of an alert.
-type Level string
-
-const (
-	LevelInfo  Level = "INFO"
-	LevelWarn  Level = "WARN"
-	LevelAlert Level = "ALERT"
-)
-
-// Event represents a single alert event emitted on a port change.
-type Event struct {
-	Timestamp time.Time
-	Host      string
-	Level     Level
-	Message   string
+// Diff holds the ports that were opened or closed between two snapshots.
+type Diff struct {
+	Opened []int
+	Closed []int
 }
 
-// Notifier writes alert events to an output destination.
+// Notifier writes alerts for port changes.
 type Notifier struct {
-	Out io.Writer
+	w io.Writer
 }
 
-// New returns a Notifier writing to stdout by default.
-func New() *Notifier {
-	return &Notifier{Out: os.Stdout}
-}
-
-// Notify emits alert events derived from a snapshot diff.
-func (n *Notifier) Notify(host string, diff snapshot.Diff) {
-	for _, p := range diff.Opened {
-		n.emit(Event{
-			Timestamp: time.Now(),
-			Host:      host,
-			Level:     LevelAlert,
-			Message:   fmt.Sprintf("port %d newly OPEN", p),
-		})
+// New creates a Notifier writing to the given writer.
+// If w is nil, os.Stdout is used.
+func New(w io.Writer) *Notifier {
+	if w == nil {
+		w = os.Stdout
 	}
-	for _, p := range diff.Closed {
-		n.emit(Event{
-			Timestamp: time.Now(),
-			Host:      host,
-			Level:     LevelWarn,
-			Message:   fmt.Sprintf("port %d newly CLOSED", p),
-		})
+	return &Notifier{w: w}
+}
+
+// Notify prints a human-readable diff to the notifier's writer.
+func (n *Notifier) Notify(host string, diff snapshot.Diff) error {
+	if len(diff.Opened) == 0 && len(diff.Closed) == 0 {
+		return nil
+	}
+
+	opened := sortedKeys(diff.Opened)
+	closed := sortedKeys(diff.Closed)
+
+	for _, p := range opened {
+		if _, err := fmt.Fprintf(n.w, "[%s] OPENED port %d\n", host, p); err != nil {
+			return err
+		}
+	}
+	for _, p := range closed {
+		if _, err := fmt.Fprintf(n.w, "[%s] CLOSED port %d\n", host, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BuildDiff converts a snapshot.Diff into an alert.Diff with sorted slices.
+func BuildDiff(d snapshot.Diff) Diff {
+	return Diff{
+		Opened: sortedKeys(d.Opened),
+		Closed: sortedKeys(d.Closed),
 	}
 }
 
-func (n *Notifier) emit(e Event) {
-	fmt.Fprintf(n.Out, "[%s] %s %s — %s\n",
-		e.Timestamp.Format(time.RFC3339),
-		e.Level,
-		e.Host,
-		e.Message,
-	)
+func sortedKeys(m map[int]struct{}) []int {
+	keys := make([]int, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Ints(keys)
+	return keys
 }

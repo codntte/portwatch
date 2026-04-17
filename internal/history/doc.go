@@ -1,27 +1,30 @@
-// Package history records and manages per-host scan change history.
+// Package history provides persistent storage for port change events.
 //
-// Each host's history is stored as a newline-delimited JSON file (JSONL)
-// under a configurable directory. Entries capture opened and closed ports
-// with a UTC timestamp.
+// It supports appending scan diff entries, loading historical records,
+// pruning old entries by age or count, exporting to CSV, and querying
+// entries by host, time range, or limit.
 //
-// Usage:
+// Typical usage:
 //
-//	store := history.NewStore("/var/lib/portwatch/history")
+//	store := history.NewStore("/var/lib/portwatch/history.json")
 //
-//	// Record a change event.
-//	store.Append(history.Entry{
-//		Timestamp: time.Now().UTC(),
+//	// Append a new change event
+//	_ = store.Append(history.Entry{
 //		Host:      "192.168.1.1",
-//		Opened:    []int{80},
+//		Timestamp: time.Now(),
+//		Opened:    []int{80, 443},
 //		Closed:    []int{22},
 //	})
 //
-//	// Read all recorded events for a host.
-//	entries, err := store.Load("192.168.1.1")
-//
-//	// Remove entries older than 7 days, keeping at most 100.
-//	store.Prune("192.168.1.1", history.PruneOptions{
-//		MaxAge:     7 * 24 * time.Hour,
-//		MaxEntries: 100,
+//	// Query recent changes for a specific host
+//	entries, _ := store.Query(history.QueryOptions{
+//		Host:  "192.168.1.1",
+//		Since: time.Now().Add(-24 * time.Hour),
 //	})
+//
+//	// Prune entries older than 30 days
+//	_ = store.Prune(history.PruneOptions{MaxAge: 30 * 24 * time.Hour})
+//
+//	// Export to CSV
+//	_ = store.ExportCSV("/tmp/history.csv")
 package history

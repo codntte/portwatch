@@ -57,6 +57,17 @@ func (p RetentionPolicy) Apply(path string) error {
 	return nil
 }
 
+// Summary returns the number of entries that would remain after applying
+// the policy to the given slice, without modifying any files.
+func (p RetentionPolicy) Summary(entries []Entry) (total int, afterAge int, afterCount int) {
+	total = len(entries)
+	aged := pruneByAge(entries, p.MaxAge)
+	afterAge = len(aged)
+	counted := pruneByCount(aged, p.MaxEntries)
+	afterCount = len(counted)
+	return
+}
+
 func splitLines(data []byte) [][]byte {
 	var lines [][]byte
 	start := 0

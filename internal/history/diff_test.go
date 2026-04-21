@@ -40,6 +40,10 @@ func TestAppendDiff_AndLoad(t *testing.T) {
 	if len(got.Closed) != 1 || got.Closed[0] != 22 {
 		t.Errorf("closed ports mismatch: %v", got.Closed)
 	}
+	// Verify timestamp round-trips correctly through JSON serialisation.
+	if !got.Timestamp.Equal(now) {
+		t.Errorf("timestamp: got %v, want %v", got.Timestamp, now)
+	}
 }
 
 func TestLoadDiffs_NoFile(t *testing.T) {
@@ -74,6 +78,12 @@ func TestAppendDiff_MultipleEntries(t *testing.T) {
 	}
 	if len(entries) != 3 {
 		t.Errorf("expected 3 entries, got %d", len(entries))
+	}
+	// Verify that opened port values are preserved in order.
+	for i, e := range entries {
+		if len(e.Opened) != 1 || e.Opened[0] != i+1 {
+			t.Errorf("entry[%d] opened: got %v, want [%d]", i, e.Opened, i+1)
+		}
 	}
 }
 

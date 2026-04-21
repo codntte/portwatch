@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"fmt"
 	"net"
 	"testing"
 
@@ -42,6 +43,33 @@ func TestRun_NoError(t *testing.T) {
 	d := notify.NewDispatcher([]notify.Channel{ch})
 	r := New(cfg, d)
 
+	if err := r.Run(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestRun_ClosedPort(t *testing.T) {
+	// Bind a port and immediately close it so we know it is not listening.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	port := ln.Addr().(*net.TCPAddr).Port
+	ln.Close()
+
+	cfg := &config.Config{
+		TimeoutSeconds: 1,
+		Hosts: []config.Host{
+			{Address: "127.0.0.1", PortRange: fmt.Sprintf("%d-%d", port, port)},
+		},
+	}
+
+	ch := notify.NewStdoutChannel()
+	d := notify.NewDispatcher([]notify.Channel{ch})
+	r := New(cfg, d)
+
+	// Run should succeed even when the target port is closed (closed ports are
+	// a normal observation, not an error condition).
 	if err := r.Run(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

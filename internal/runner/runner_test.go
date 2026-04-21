@@ -28,20 +28,26 @@ func startTCPServer(t *testing.T) (int, func()) {
 	return port, func() { ln.Close() }
 }
 
+// newTestRunner constructs a Runner with a single-host config pointing at the
+// given address:port and a stdout dispatcher, reducing boilerplate in tests.
+func newTestRunner(t *testing.T, address string, port int) *Runner {
+	t.Helper()
+	cfg := &config.Config{
+		TimeoutSeconds: 1,
+		Hosts: []config.Host{
+			{Address: address, PortRange: fmt.Sprintf("%d-%d", port, port)},
+		},
+	}
+	ch := notify.NewStdoutChannel()
+	d := notify.NewDispatcher([]notify.Channel{ch})
+	return New(cfg, d)
+}
+
 func TestRun_NoError(t *testing.T) {
 	port, stop := startTCPServer(t)
 	defer stop()
 
-	cfg := &config.Config{
-		TimeoutSeconds: 1,
-		Hosts: []config.Host{
-			{Address: "127.0.0.1", PortRange: fmt.Sprintf("%d-%d", port, port)},
-		},
-	}
-
-	ch := notify.NewStdoutChannel()
-	d := notify.NewDispatcher([]notify.Channel{ch})
-	r := New(cfg, d)
+	r := newTestRunner(t, "127.0.0.1", port)
 
 	if err := r.Run(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -57,16 +63,7 @@ func TestRun_ClosedPort(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	ln.Close()
 
-	cfg := &config.Config{
-		TimeoutSeconds: 1,
-		Hosts: []config.Host{
-			{Address: "127.0.0.1", PortRange: fmt.Sprintf("%d-%d", port, port)},
-		},
-	}
-
-	ch := notify.NewStdoutChannel()
-	d := notify.NewDispatcher([]notify.Channel{ch})
-	r := New(cfg, d)
+	r := newTestRunner(t, "127.0.0.1", port)
 
 	// Run should succeed even when the target port is closed (closed ports are
 	// a normal observation, not an error condition).

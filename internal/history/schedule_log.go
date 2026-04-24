@@ -62,3 +62,20 @@ func (s *ScheduleLogStore) Load() ([]ScheduleEntry, error) {
 	}
 	return entries, nil
 }
+
+// LoadForHost reads all ScheduleEntry records from the log file that match
+// the given host. Returns an empty slice if the file does not exist.
+func (s *ScheduleLogStore) LoadForHost(host string) ([]ScheduleEntry, error) {
+	all, err := s.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	var entries []ScheduleEntry
+	for _, e := range all {
+		if e.Host == host {
+			entries = append(entries, e)
+		}
+	}
+	return entries, nil
+}
